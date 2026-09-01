@@ -112,6 +112,58 @@ Open [http://localhost:3000](http://localhost:3000)
 - **Variable (30%)** — Paid based on attendance ratio, only if target is met
 - Formula: `Variable = variableSalary × (officeDays + homeDays) / totalWorkingDays`
 
+## Deploy to Vercel
+
+### Prerequisites
+1. [Vercel account](https://vercel.com/signup)
+2. [Neon Postgres](https://neon.tech) database (free tier)
+3. Google OAuth credentials with production redirect URI
+
+### 1. Create Neon database
+
+1. Go to [console.neon.tech](https://console.neon.tech) and create a project
+2. Copy the **pooled** connection string → `DATABASE_URL`
+3. Copy the **direct** connection string → `DIRECT_URL`
+
+### 2. Deploy
+
+```bash
+npm i -g vercel   # or use: npx vercel
+vercel login
+vercel
+```
+
+When prompted, link to a new project named `abtalks`.
+
+### 3. Set environment variables
+
+In the [Vercel dashboard](https://vercel.com/dashboard) → Project → Settings → Environment Variables, add:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Neon pooled connection string |
+| `DIRECT_URL` | Neon direct connection string |
+| `NEXTAUTH_SECRET` | Random string (`openssl rand -base64 32`) |
+| `NEXTAUTH_URL` | `https://your-app.vercel.app` |
+| `GOOGLE_CLIENT_ID` | From Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
+
+Then redeploy: `vercel --prod`
+
+### 4. Google OAuth production setup
+
+In Google Cloud Console → Credentials → your OAuth client, add:
+
+```
+https://your-app.vercel.app/api/auth/callback/google
+```
+
+### 5. Verify
+
+Open your Vercel URL → sign in with an admin Gmail (`anilbajpai1987@gmail.com` or `divyashukla515@gmail.com`).
+
+The build automatically runs `prisma db push` and seeds employees/holidays on each deploy.
+
 ## Business Rules
 
 1. Attendance marking window: 9 AM – 9 PM IST
