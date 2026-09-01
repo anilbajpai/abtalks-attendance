@@ -3,10 +3,11 @@ import GoogleProvider from "next-auth/providers/google";
 import { getUserByEmail, isAllowedEmail } from "./users";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
     }),
   ],
   callbacks: {

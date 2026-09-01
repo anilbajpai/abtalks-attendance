@@ -61,8 +61,8 @@ npm install
 Copy `.env.example` to `.env` and fill in:
 
 ```env
-GOOGLE_CLIENT_ID="802826802868-1r1ddbabflgvh8c006g0jgkpagra4t45.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="GGOCSPX-YMb2mVbeYRhWuIXRZm4XLc8BFdXs"
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
 GOOGLE_SERVICE_ACCOUNT_EMAIL="your-sa@project.iam.gserviceaccount.com"
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 GOOGLE_SHEET_ID="your-sheet-id"
@@ -160,7 +160,7 @@ In Vercel Dashboard → Project → Settings → Environment Variables:
 | `GOOGLE_PRIVATE_KEY` | Service account private key |
 | `GOOGLE_SHEET_ID` | Google Sheet ID |
 | `NEXTAUTH_SECRET` | Random string (`openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | `https://your-app.vercel.app` |
+| `NEXTAUTH_URL` | Production URL, e.g. `https://abtalks-attendance.vercel.app` — **not** `http://localhost:3000` |
 
 ### 3. Google OAuth production redirect
 

@@ -1,8 +1,28 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  OAuthSignin:
+    "Could not start Google sign-in. On Vercel, NEXTAUTH_URL must be your https production domain (not localhost), and GOOGLE_CLIENT_ID must be set.",
+  OAuthCallback:
+    "Google rejected the callback. In Google Cloud → Credentials → your Web client, add Authorized redirect URI: https://YOUR_DOMAIN/api/auth/callback/google",
+  OAuthCreateAccount: "Could not create a session for this Google account.",
+  AccessDenied: "This Google account is not on the ABTalks employee list.",
+  Configuration:
+    "Auth is misconfigured. Check NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, and GOOGLE_CLIENT_SECRET on Vercel, then redeploy.",
+  Default: "Sign-in failed. Try again.",
+};
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  const message = error
+    ? ERROR_MESSAGES[error] || ERROR_MESSAGES.Default
+    : null;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md space-y-8">
@@ -13,6 +33,12 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-slate-900">ABTalks</h1>
           <p className="text-slate-500">Employee Attendance System</p>
         </div>
+
+        {message && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {message}
+          </div>
+        )}
 
         <div className="space-y-4">
           <button
@@ -47,5 +73,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
