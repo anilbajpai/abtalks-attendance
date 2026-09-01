@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AttendanceType } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { upsertAttendanceRecord } from "@/lib/google-sheets";
 import { canAdminOverride } from "@/lib/attendance-rules";
+import type { AttendanceType } from "@/types";
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -37,22 +37,12 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const record = await prisma.attendanceRecord.upsert({
-      where: {
-        userId_date: { userId, date },
-      },
-      update: {
-        type,
-        isOverride: true,
-        note: note || `Overridden by ${session.user.name}`,
-      },
-      create: {
-        userId,
-        date,
-        type,
-        isOverride: true,
-        note: note || `Overridden by ${session.user.name}`,
-      },
+    const record = await upsertAttendanceRecord({
+      userId,
+      date,
+      type,
+      isOverride: true,
+      note: note || `Overridden by ${session.user.name}`,
     });
 
     return NextResponse.json({ record });

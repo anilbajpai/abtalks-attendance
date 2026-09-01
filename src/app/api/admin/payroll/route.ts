@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { HOLIDAYS_2026 } from "@/lib/constants";
+import { getAllEmployees } from "@/lib/users";
+import { getAttendanceRecords } from "@/lib/google-sheets";
 import {
   calculatePayroll,
   countWorkingDays,
   getMonthDays,
   isSunday,
 } from "@/lib/attendance-rules";
+
+// Payroll runs are computed on the fly from Google Sheets attendance.
+// Database persistence for payroll history is disabled.
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,14 +20,7 @@ export async function GET(req: NextRequest) {
     const month = parseInt(searchParams.get("month") || "1");
     const year = parseInt(searchParams.get("year") || "2026");
 
-    const runs = await prisma.payrollRun.findMany({
-      where: { month, year },
-      include: {
-        user: { select: { name: true, email: true } },
-      },
-      orderBy: { user: { name: "asc" } },
-    });
-
+    const runs = await computePayrollRuns(month, year);
     return NextResponse.json({ runs });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error";
@@ -44,102 +42,76 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const employees = await prisma.user.findMany({
-      where: { role: "EMPLOYEE" },
-    });
-
-    const days = getMonthDays(year, month);
-    const holidays = await prisma.holiday.findMany({
-      where: {
-        date: {
-          gte: days[0],
-          lte: days[days.length - 1],
-        },
-      },
-    });
-    const holidaySet = new Set(holidays.map((h) => h.date));
-    const totalWorkingDays = countWorkingDays(days, holidaySet);
-
-    const results = [];
-
-    for (const emp of employees) {
-      const records = await prisma.attendanceRecord.findMany({
-        where: {
-          userId: emp.id,
-          date: { in: days },
-        },
-      });
-
-      const recordMap = Object.fromEntries(
-        records.map((r) => [r.date, r.type])
-      );
-
-      let officeDays = 0;
-      let homeDays = 0;
-      let leaveDays = 0;
-
-      for (const day of days) {
-        const type = recordMap[day];
-        if (isSunday(day) || holidaySet.has(day)) {
-          leaveDays++;
-          continue;
-        }
-        if (type === "OFFICE") officeDays++;
-        else if (type === "HOME") homeDays++;
-        else leaveDays++;
-      }
-
-      const { fixedAmount, variableAmount, totalAmount } = calculatePayroll(
-        emp.fixedSalary,
-        emp.variableSalary,
-        emp.targetMet,
-        officeDays,
-        homeDays,
-        totalWorkingDays
-      );
-
-      const run = await prisma.payrollRun.upsert({
-        where: {
-          userId_month_year: {
-            userId: emp.id,
-            month,
-            year,
-          },
-        },
-        update: {
-          fixedAmount,
-          variableAmount,
-          totalAmount,
-          targetMet: emp.targetMet,
-          officeDays,
-          homeDays,
-          leaveDays,
-          processedAt: new Date(),
-          processedBy: session.user.name || session.user.email || "Admin",
-        },
-        create: {
-          userId: emp.id,
-          month,
-          year,
-          fixedAmount,
-          variableAmount,
-          totalAmount,
-          targetMet: emp.targetMet,
-          officeDays,
-          homeDays,
-          leaveDays,
-          processedBy: session.user.name || session.user.email || "Admin",
-        },
-      });
-
-      results.push(run);
-    }
-
-    return NextResponse.json({ runs: results, count: results.length });
+    const runs = await computePayrollRuns(month, year, session.user.name || "Admin");
+    return NextResponse.json({ runs, count: runs.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error";
     const status =
       message === "Unauthorized" ? 401 : message === "Forbidden" ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
+}
+
+async function computePayrollRuns(
+  month: number,
+  year: number,
+  processedBy = "Admin"
+) {
+  const employees = getAllEmployees();
+  const days = getMonthDays(year, month);
+  const holidaySet = new Set(
+    HOLIDAYS_2026.filter((h) => h.date >= days[0] && h.date <= days.at(-1)!)
+      .map((h) => h.date)
+  );
+  const totalWorkingDays = countWorkingDays(days, holidaySet);
+
+  const runs = [];
+
+  for (const emp of employees) {
+    const records = await getAttendanceRecords(emp.id, days[0], days.at(-1)!);
+    const recordMap = Object.fromEntries(records.map((r) => [r.date, r.type]));
+
+    let officeDays = 0;
+    let homeDays = 0;
+    let leaveDays = 0;
+
+    for (const day of days) {
+      const type = recordMap[day];
+      if (isSunday(day) || holidaySet.has(day)) {
+        leaveDays++;
+        continue;
+      }
+      if (type === "OFFICE") officeDays++;
+      else if (type === "HOME") homeDays++;
+      else leaveDays++;
+    }
+
+    const { fixedAmount, variableAmount, totalAmount } = calculatePayroll(
+      emp.fixedSalary,
+      emp.variableSalary,
+      emp.targetMet,
+      officeDays,
+      homeDays,
+      totalWorkingDays
+    );
+
+    runs.push({
+      id: `${emp.id}-${year}-${month}`,
+      userId: emp.id,
+      month,
+      year,
+      fixedAmount,
+      variableAmount,
+      totalAmount,
+      targetMet: emp.targetMet,
+      officeDays,
+      homeDays,
+      leaveDays,
+      processedAt: new Date().toISOString(),
+      processedBy,
+      user: { name: emp.name, email: emp.email },
+    });
+  }
+
+  return runs;
 }

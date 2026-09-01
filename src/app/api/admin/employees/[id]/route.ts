@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+
+// Database disabled — salary updates are read-only from constants.ts for now.
+// Re-enable Prisma to persist salary/target changes.
 
 export async function PATCH(
   req: NextRequest,
@@ -8,30 +10,16 @@ export async function PATCH(
 ) {
   try {
     await requireAdmin();
-    const { id: userId } = await params;
-    const { fixedSalary, variableSalary, targetMet } = await req.json();
+    await params;
+    await req.json();
 
-    const existing = await prisma.user.findUnique({ where: { id: userId } });
-    if (!existing) {
-      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
-    }
-
-    const newFixed = fixedSalary ?? existing.fixedSalary;
-    const newVariable = variableSalary ?? existing.variableSalary;
-
-    const data: Record<string, unknown> = {
-      baseSalary: newFixed + newVariable,
-    };
-    if (fixedSalary !== undefined) data.fixedSalary = fixedSalary;
-    if (variableSalary !== undefined) data.variableSalary = variableSalary;
-    if (targetMet !== undefined) data.targetMet = targetMet;
-
-    const employee = await prisma.user.update({
-      where: { id: userId },
-      data,
-    });
-
-    return NextResponse.json({ employee });
+    return NextResponse.json(
+      {
+        error:
+          "Salary updates are disabled while using Google Sheets. Edit src/lib/constants.ts or re-enable the database.",
+      },
+      { status: 501 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error";
     const status =
