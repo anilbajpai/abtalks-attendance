@@ -4,19 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma db push && tsx prisma/seed.ts && next build",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "vercel-build": "next build"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "googleapis": "^148.0.0",
     "next": "^15.2.0",
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
@@ -30,9 +26,7 @@
     "@types/react-dom": "^19.0.4",
     "eslint": "^9.21.0",
     "eslint-config-next": "^15.2.0",
-    "prisma": "^6.5.0",
     "tailwindcss": "^4.0.9",
-    "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
 }

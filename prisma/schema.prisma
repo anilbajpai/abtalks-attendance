@@ -1,80 +1,83 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
-enum Role {
-  ADMIN
-  EMPLOYEE
-}
-
-enum AttendanceType {
-  OFFICE
-  HOME
-  LEAVE
-  PLANNED_LEAVE
-  SUNDAY
-  HOLIDAY
-}
-
-model User {
-  id              String             @id @default(cuid())
-  email           String             @unique
-  name            String
-  role            Role               @default(EMPLOYEE)
-  baseSalary      Int                @default(0)
-  fixedSalary     Int                @default(0)
-  variableSalary  Int                @default(0)
-  targetMet       Boolean            @default(false)
-  image           String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  attendance      AttendanceRecord[]
-  payrollRuns     PayrollRun[]
-}
-
-model AttendanceRecord {
-  id         String         @id @default(cuid())
-  userId     String
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date       String
-  type       AttendanceType
-  isOverride Boolean        @default(false)
-  note       String?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-
-  @@unique([userId, date])
-  @@index([userId, date])
-}
-
-model Holiday {
-  id   String @id @default(cuid())
-  date String @unique
-  name String
-  type String @default("Gazetted")
-}
-
-model PayrollRun {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  month           Int
-  year            Int
-  fixedAmount     Int
-  variableAmount  Int
-  totalAmount     Int
-  targetMet       Boolean
-  officeDays      Int      @default(0)
-  homeDays        Int      @default(0)
-  leaveDays       Int      @default(0)
-  processedAt     DateTime @default(now())
-  processedBy     String
-
-  @@unique([userId, month, year])
-}
+// DATABASE DISABLED — attendance is stored in Google Sheets.
+// To re-enable: uncomment this schema, restore prisma deps, and set DATABASE_URL.
+//
+// generator client {
+//   provider = "prisma-client-js"
+// }
+//
+// datasource db {
+//   provider  = "postgresql"
+//   url       = env("DATABASE_URL")
+//   directUrl = env("DIRECT_URL")
+// }
+//
+// enum Role {
+//   ADMIN
+//   EMPLOYEE
+// }
+//
+// enum AttendanceType {
+//   OFFICE
+//   HOME
+//   LEAVE
+//   PLANNED_LEAVE
+//   SUNDAY
+//   HOLIDAY
+// }
+//
+// model User {
+//   id              String             @id @default(cuid())
+//   email           String             @unique
+//   name            String
+//   role            Role               @default(EMPLOYEE)
+//   baseSalary      Int                @default(0)
+//   fixedSalary     Int                @default(0)
+//   variableSalary  Int                @default(0)
+//   targetMet       Boolean            @default(false)
+//   image           String?
+//   createdAt       DateTime           @default(now())
+//   updatedAt       DateTime           @updatedAt
+//   attendance      AttendanceRecord[]
+//   payrollRuns     PayrollRun[]
+// }
+//
+// model AttendanceRecord {
+//   id         String         @id @default(cuid())
+//   userId     String
+//   user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   date       String
+//   type       AttendanceType
+//   isOverride Boolean        @default(false)
+//   note       String?
+//   createdAt  DateTime       @default(now())
+//   updatedAt  DateTime       @updatedAt
+//
+//   @@unique([userId, date])
+//   @@index([userId, date])
+// }
+//
+// model Holiday {
+//   id   String @id @default(cuid())
+//   date String @unique
+//   name String
+//   type String @default("Gazetted")
+// }
+//
+// model PayrollRun {
+//   id              String   @id @default(cuid())
+//   userId          String
+//   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   month           Int
+//   year            Int
+//   fixedAmount     Int
+//   variableAmount  Int
+//   totalAmount     Int
+//   targetMet       Boolean
+//   officeDays      Int      @default(0)
+//   homeDays        Int      @default(0)
+//   leaveDays       Int      @default(0)
+//   processedAt     DateTime @default(now())
+//   processedBy     String
+//
+//   @@unique([userId, month, year])
+// }

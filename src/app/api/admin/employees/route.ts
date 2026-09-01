@@ -1,23 +1,19 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { getAllEmployees } from "@/lib/users";
 
 export async function GET() {
   try {
     await requireAdmin();
-    const employees = await prisma.user.findMany({
-      where: { role: "EMPLOYEE" },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        baseSalary: true,
-        fixedSalary: true,
-        variableSalary: true,
-        targetMet: true,
-      },
-    });
+    const employees = getAllEmployees().map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      baseSalary: u.baseSalary,
+      fixedSalary: u.fixedSalary,
+      variableSalary: u.variableSalary,
+      targetMet: u.targetMet,
+    }));
     return NextResponse.json({ employees });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error";

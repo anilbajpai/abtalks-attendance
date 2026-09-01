@@ -29,8 +29,9 @@ A full-featured employee attendance and payroll management system for ABTalks.
 - **Next.js 15** (App Router)
 - **TypeScript**
 - **Tailwind CSS**
-- **Prisma** + SQLite
+- **Google Sheets** (attendance storage — free)
 - **NextAuth.js** (Google OAuth)
+- ~~Prisma + PostgreSQL~~ (disabled — code commented out)
 
 ## Setup
 
@@ -40,42 +41,63 @@ A full-featured employee attendance and payroll management system for ABTalks.
 npm install
 ```
 
-### 2. Configure environment
+### 2. Create a Google Sheet
+
+1. Create a new Google Sheet at [sheets.google.com](https://sheets.google.com)
+2. Rename the first tab to **`Attendance`**
+3. Copy the Sheet ID from the URL: `https://docs.google.com/spreadsheets/d/SHEET_ID/edit`
+
+### 3. Create a Google Service Account
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create/select a project → **APIs & Services** → **Enable APIs** → enable **Google Sheets API**
+3. **Credentials** → **Create Credentials** → **Service Account**
+4. Create the account → **Keys** → **Add Key** → **JSON** → download
+5. From the JSON file, copy `client_email` and `private_key`
+6. **Share your Google Sheet** with the service account email (Editor access)
+
+### 4. Configure environment
 
 Copy `.env.example` to `.env` and fill in:
 
 ```env
-DATABASE_URL="file:./dev.db"
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+GOOGLE_SERVICE_ACCOUNT_EMAIL="your-sa@project.iam.gserviceaccount.com"
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_SHEET_ID="your-sheet-id"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-random-secret-here"
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
 ```
 
-### 3. Set up Google OAuth
+### 5. Google OAuth (login)
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project (or use existing)
-3. Enable **Google+ API** / **Google Identity**
-4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
-5. Application type: **Web application**
-6. Authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
-7. Copy Client ID and Client Secret to `.env`
+1. In Google Cloud Console → **Credentials** → **OAuth 2.0 Client ID** (Web application)
+2. Authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+3. Copy Client ID and Secret to `.env`
 
-### 4. Initialize database
-
-```bash
-npx prisma db push
-npm run db:seed
-```
-
-### 5. Run development server
+### 6. Run
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+## Google Sheet Format
+
+The app auto-creates headers on first use:
+
+| Email | Date | Type | IsOverride | Note | UpdatedAt |
+|-------|------|------|------------|------|-----------|
+| sksohailswaraj@gmail.com | 2026-09-01 | OFFICE | FALSE | | 2026-09-01T10:00:00Z |
+
+You can view and edit attendance directly in the sheet.
+
+## Database (disabled)
+
+Prisma/PostgreSQL code is commented out in `prisma/`, `src/lib/prisma.ts`, and `prisma/seed.ts`.
+To re-enable, uncomment those files, add `DATABASE_URL` to `.env`, and restore prisma deps in `package.json`.
 
 ## Employees
 
@@ -116,53 +138,35 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ### Prerequisites
 1. [Vercel account](https://vercel.com/signup)
-2. [Neon Postgres](https://neon.tech) database (free tier)
+2. Google Sheet + Service Account (see Setup above)
 3. Google OAuth credentials with production redirect URI
 
-### 1. Create Neon database
-
-1. Go to [console.neon.tech](https://console.neon.tech) and create a project
-2. Copy the **pooled** connection string → `DATABASE_URL`
-3. Copy the **direct** connection string → `DIRECT_URL`
-
-### 2. Deploy
+### 1. Deploy
 
 ```bash
-npm i -g vercel   # or use: npx vercel
-vercel login
-vercel
+npx vercel login
+npx vercel --prod
 ```
 
-When prompted, link to a new project named `abtalks`.
+### 2. Set environment variables
 
-### 3. Set environment variables
-
-In the [Vercel dashboard](https://vercel.com/dashboard) → Project → Settings → Environment Variables, add:
+In Vercel Dashboard → Project → Settings → Environment Variables:
 
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | Neon pooled connection string |
-| `DIRECT_URL` | Neon direct connection string |
+| `GOOGLE_CLIENT_ID` | OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account email |
+| `GOOGLE_PRIVATE_KEY` | Service account private key |
+| `GOOGLE_SHEET_ID` | Google Sheet ID |
 | `NEXTAUTH_SECRET` | Random string (`openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | `https://your-app.vercel.app` |
-| `GOOGLE_CLIENT_ID` | From Google Cloud Console |
-| `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
 
-Then redeploy: `vercel --prod`
-
-### 4. Google OAuth production setup
-
-In Google Cloud Console → Credentials → your OAuth client, add:
+### 3. Google OAuth production redirect
 
 ```
 https://your-app.vercel.app/api/auth/callback/google
 ```
-
-### 5. Verify
-
-Open your Vercel URL → sign in with an admin Gmail (`anilbajpai1987@gmail.com` or `divyashukla515@gmail.com`).
-
-The build automatically runs `prisma db push` and seeds employees/holidays on each deploy.
 
 ## Business Rules
 
