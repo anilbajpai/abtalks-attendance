@@ -43,7 +43,7 @@ export default function AdminPage() {
       router.push("/dashboard");
     }
   }, [status, session, router]);
-
+/* //Employee Salary Configuration */
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role === "ADMIN") {
       fetch("/api/admin/employees")
