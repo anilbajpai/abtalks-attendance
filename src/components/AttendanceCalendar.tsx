@@ -23,6 +23,7 @@ interface AttendanceRecord {
   date: string;
   type: string;
   isOverride: boolean;
+  status?: string;
 }
 
 interface Holiday {
@@ -38,17 +39,25 @@ interface CalendarProps {
   onMark: (date: string, type: string) => Promise<void>;
   isAdmin?: boolean;
   onAdminOverride?: (date: string, type: string) => Promise<void>;
+  onLeaveDecision?: (date: string, action: "approve" | "reject") => Promise<void>;
   loading?: boolean;
 }
 
 const MARK_OPTIONS = [
   { type: "OFFICE", label: "Office", color: "bg-emerald-500" },
   { type: "HOME", label: "Home", color: "bg-blue-500" },
-  { type: "LEAVE", label: "Leave", color: "bg-amber-500" },
+  { type: "LEAVE", label: "Request Leave", color: "bg-amber-500" },
 ];
 
 const FUTURE_OPTIONS = [
-  { type: "PLANNED_LEAVE", label: "Planned Leave", color: "bg-orange-500" },
+  { type: "PLANNED_LEAVE", label: "Request Planned Leave", color: "bg-orange-500" },
+];
+
+const ADMIN_MARK_OPTIONS = [
+  { type: "OFFICE", label: "Office", color: "bg-emerald-500" },
+  { type: "HOME", label: "Home", color: "bg-blue-500" },
+  { type: "LEAVE", label: "Leave (Approved)", color: "bg-amber-500" },
+  { type: "PLANNED_LEAVE", label: "Planned Leave (Approved)", color: "bg-orange-500" },
 ];
 
 export function AttendanceCalendar({
@@ -59,6 +68,7 @@ export function AttendanceCalendar({
   onMark,
   isAdmin = false,
   onAdminOverride,
+  onLeaveDecision,
   loading = false,
 }: CalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -77,10 +87,13 @@ export function AttendanceCalendar({
   }
 
   function getDayLabel(date: string): string | null {
+    const record = recordMap[date];
     const type = getDayType(date);
     if (!type) return null;
     if (type === "HOLIDAY") return holidays[date]?.name || "Holiday";
-    return ATTENDANCE_TYPE_LABELS[type] || type;
+    const label = ATTENDANCE_TYPE_LABELS[type] || type;
+    if (record?.status === "PENDING") return `${label} (Pending)`;
+    return label;
   }
 
   async function handleMark(type: string) {
@@ -98,23 +111,52 @@ export function AttendanceCalendar({
     }
   }
 
+  async function handleLeaveDecision(action: "approve" | "reject") {
+    if (!selectedDate || !onLeaveDecision) return;
+    setMarking(true);
+    try {
+      await onLeaveDecision(selectedDate, action);
+      setSelectedDate(null);
+    } finally {
+      setMarking(false);
+    }
+  }
+
+  async function handleCancelRequest() {
+    if (!selectedDate) return;
+    setMarking(true);
+    try {
+      await onMark(selectedDate, "CANCEL_LEAVE");
+      setSelectedDate(null);
+    } finally {
+      setMarking(false);
+    }
+  }
+
   const selectedRecord = selectedDate ? recordMap[selectedDate] : null;
+  const selectedPending = selectedRecord?.status === "PENDING";
   const canMark = selectedDate
     ? isAdmin
       ? true
-      : canEmployeeMark(selectedDate, selectedRecord?.type).allowed
+      : canEmployeeMark(
+          selectedDate,
+          selectedRecord?.type,
+          selectedRecord?.status
+        ).allowed
     : false;
 
-  const options = selectedDate && isFuture(selectedDate)
-    ? FUTURE_OPTIONS
-    : MARK_OPTIONS;
+  const options =
+    selectedDate && isFuture(selectedDate) ? FUTURE_OPTIONS : MARK_OPTIONS;
 
   const summary = {
     office: records.filter((r) => r.type === "OFFICE").length,
     home: records.filter((r) => r.type === "HOME").length,
     leave: records.filter(
-      (r) => r.type === "LEAVE" || r.type === "PLANNED_LEAVE"
+      (r) =>
+        (r.type === "LEAVE" || r.type === "PLANNED_LEAVE") &&
+        r.status !== "PENDING"
     ).length,
+    pending: records.filter((r) => r.status === "PENDING").length,
     sundays: days.filter((d) => isSunday(d)).length,
     holidays: days.filter((d) => holidays[d]).length,
   };
@@ -125,11 +167,12 @@ export function AttendanceCalendar({
         <h2 className="text-xl font-semibold text-slate-900">
           {getMonthName(year, month)}
         </h2>
-        <div className="flex gap-4 text-sm">
+        <div className="flex flex-wrap gap-4 text-sm">
           {Object.entries({
             Office: summary.office,
             Home: summary.home,
             Leave: summary.leave,
+            Pending: summary.pending,
             Sundays: summary.sundays,
             Holidays: summary.holidays,
           }).map(([label, count]) => (
@@ -149,6 +192,10 @@ export function AttendanceCalendar({
             <span className="text-slate-600">{label}</span>
           </div>
         ))}
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-yellow-400" />
+          <span className="text-slate-600">Pending approval</span>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -171,10 +218,16 @@ export function AttendanceCalendar({
             const label = getDayLabel(date);
             const isCurrentDay = date === today;
             const record = recordMap[date];
-            const bgClass = type ? ATTENDANCE_TYPE_BG[type] : "";
+            const isPending = record?.status === "PENDING";
+            const bgClass = isPending
+              ? ATTENDANCE_TYPE_BG.PENDING
+              : type
+                ? ATTENDANCE_TYPE_BG[type]
+                : "";
             const isClickable =
               isAdmin ||
-              canEmployeeMark(date, record?.type).allowed ||
+              isPending ||
+              canEmployeeMark(date, record?.type, record?.status).allowed ||
               isFuture(date);
 
             return (
@@ -222,36 +275,79 @@ export function AttendanceCalendar({
                   Current: {getDayLabel(selectedDate)}
                 </p>
               )}
-              {isToday(selectedDate) && !canMark && !isAdmin && (
+              {selectedPending && (
+                <p className="text-sm text-yellow-700 mt-1">
+                  Waiting for admin approval.
+                </p>
+              )}
+              {isToday(selectedDate) && !canMark && !isAdmin && !selectedPending && (
                 <p className="text-sm text-amber-600 mt-1">
-                  {canEmployeeMark(selectedDate, selectedRecord?.type).reason}
+                  {canEmployeeMark(
+                    selectedDate,
+                    selectedRecord?.type,
+                    selectedRecord?.status
+                  ).reason}
                 </p>
               )}
             </div>
 
+            {selectedPending && isAdmin && onLeaveDecision && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleLeaveDecision("approve")}
+                  disabled={marking}
+                  className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => handleLeaveDecision("reject")}
+                  disabled={marking}
+                  className="px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            )}
+
+            {selectedPending && !isAdmin && (
+              <button
+                onClick={handleCancelRequest}
+                disabled={marking}
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel request
+              </button>
+            )}
+
             {(canMark || isAdmin) && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-slate-700">
-                  {isFuture(selectedDate)
-                    ? "Mark planned leave"
-                    : "Mark attendance"}
+                  {isAdmin
+                    ? "Mark attendance"
+                    : isFuture(selectedDate)
+                      ? "Request planned leave — admin must approve"
+                      : "Mark attendance"}
                 </p>
+                {!isAdmin && !isFuture(selectedDate) && (
+                  <p className="text-xs text-slate-500">
+                    Leave requests need admin approval.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 gap-2">
-                  {(isAdmin ? [...MARK_OPTIONS, ...FUTURE_OPTIONS] : options).map(
-                    (opt) => (
-                      <button
-                        key={opt.type}
-                        onClick={() => handleMark(opt.type)}
-                        disabled={marking}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors disabled:opacity-50`}
-                      >
-                        <div className={`w-4 h-4 rounded-full ${opt.color}`} />
-                        <span className="font-medium text-slate-800">
-                          {opt.label}
-                        </span>
-                      </button>
-                    )
-                  )}
+                  {(isAdmin ? ADMIN_MARK_OPTIONS : options).map((opt) => (
+                    <button
+                      key={opt.type}
+                      onClick={() => handleMark(opt.type)}
+                      disabled={marking}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors disabled:opacity-50"
+                    >
+                      <div className={`w-4 h-4 rounded-full ${opt.color}`} />
+                      <span className="font-medium text-slate-800">
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -260,7 +356,7 @@ export function AttendanceCalendar({
               onClick={() => setSelectedDate(null)}
               className="w-full py-2 text-sm text-slate-500 hover:text-slate-700"
             >
-              Cancel
+              Close
             </button>
           </div>
         </div>

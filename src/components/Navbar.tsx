@@ -3,6 +3,46 @@
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+
+function getInitials(name?: string | null): string {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function UserAvatar({
+  name,
+  image,
+}: {
+  name?: string | null;
+  image?: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const showPhoto = Boolean(image) && !failed;
+
+  if (showPhoto) {
+    return (
+      <img
+        src={image!}
+        alt={name || "User"}
+        className="w-8 h-8 rounded-full object-cover bg-slate-200"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center"
+      title={name || undefined}
+      aria-label={name || "User"}
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -58,13 +98,10 @@ export function Navbar() {
                     {isAdmin ? "Admin" : "Employee"}
                   </p>
                 </div>
-                {session.user.image && (
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    className="w-8 h-8 rounded-full"
-                  />
-                )}
+                <UserAvatar
+                  name={session.user.name}
+                  image={session.user.image}
+                />
                 <button
                   onClick={() => signOut({ callbackUrl: "/login" })}
                   className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-50"

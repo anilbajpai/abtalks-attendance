@@ -9,6 +9,7 @@ import {
 import {
   canEmployeeMark,
   isFuture,
+  isLeaveType,
   isSunday,
 } from "@/lib/attendance-rules";
 import type { AttendanceType } from "@/types";
@@ -74,7 +75,31 @@ export async function POST(req: NextRequest) {
     }
 
     const existing = await getAttendanceRecord(session.user.id, date);
-    const { allowed, reason } = canEmployeeMark(date, existing?.type);
+
+    if (type === "CANCEL_LEAVE") {
+      if (existing?.status !== "PENDING") {
+        return NextResponse.json(
+          { error: "Only pending leave requests can be cancelled" },
+          { status: 400 }
+        );
+      }
+
+      const record = await upsertAttendanceRecord({
+        userId: session.user.id,
+        date,
+        type: existing.type,
+        status: "REJECTED",
+        note: "Cancelled by employee",
+      });
+
+      return NextResponse.json({ record, cancelled: true });
+    }
+
+    const { allowed, reason } = canEmployeeMark(
+      date,
+      existing?.type,
+      existing?.status
+    );
     if (!allowed) {
       return NextResponse.json({ error: reason }, { status: 400 });
     }
@@ -98,10 +123,13 @@ export async function POST(req: NextRequest) {
       attendanceType = type;
     }
 
+    const requestingLeave = isLeaveType(attendanceType);
     const record = await upsertAttendanceRecord({
       userId: session.user.id,
       date,
       type: attendanceType,
+      status: requestingLeave ? "PENDING" : "APPROVED",
+      note: requestingLeave ? "Awaiting admin approval" : "",
     });
 
     return NextResponse.json({ record });

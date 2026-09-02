@@ -12,6 +12,7 @@ interface AttendanceRecord {
   date: string;
   type: string;
   isOverride: boolean;
+  status?: string;
 }
 
 export default function CalendarPage() {

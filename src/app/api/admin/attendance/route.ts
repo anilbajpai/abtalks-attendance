@@ -16,13 +16,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    if (!canAdminOverride(date)) {
-      return NextResponse.json(
-        { error: "Admin can only override attendance for the last 7 days" },
-        { status: 400 }
-      );
-    }
-
     const validTypes: AttendanceType[] = [
       "OFFICE",
       "HOME",
@@ -37,11 +30,20 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    const isLeave = type === "LEAVE" || type === "PLANNED_LEAVE";
+    if (!isLeave && !canAdminOverride(date)) {
+      return NextResponse.json(
+        { error: "Admin can only override attendance for the last 7 days" },
+        { status: 400 }
+      );
+    }
+
     const record = await upsertAttendanceRecord({
       userId,
       date,
       type,
       isOverride: true,
+      status: "APPROVED",
       note: note || `Overridden by ${session.user.name}`,
     });
 

@@ -8,6 +8,8 @@ export type AttendanceType =
   | "SUNDAY"
   | "HOLIDAY";
 
+export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
+
 export interface User {
   id: string;
   email: string;
@@ -27,6 +29,8 @@ export interface AttendanceRecord {
   type: AttendanceType;
   isOverride: boolean;
   note?: string | null;
+  status: LeaveStatus;
+  updatedAt?: string | null;
 }
 
 export interface Holiday {

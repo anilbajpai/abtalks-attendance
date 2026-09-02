@@ -1,5 +1,5 @@
 import { google } from "googleapis";
-import type { AttendanceRecord, AttendanceType } from "@/types";
+import type { AttendanceRecord, AttendanceType, LeaveStatus } from "@/types";
 
 const SHEET_NAME = "Attendance";
 
@@ -10,6 +10,7 @@ const HEADERS = [
   "IsOverride",
   "Note",
   "UpdatedAt",
+  "Status",
 ];
 
 /**
@@ -169,6 +170,12 @@ function getSheetsClient() {
   };
 }
 
+function normalizeStatus(raw?: string): LeaveStatus {
+  const value = (raw || "").trim().toUpperCase();
+  if (value === "PENDING" || value === "REJECTED") return value;
+  return "APPROVED";
+}
+
 /**
  * Convert a Google Sheets row into an AttendanceRecord.
  */
@@ -181,6 +188,8 @@ function rowToRecord(
     type,
     isOverride,
     note,
+    updatedAt,
+    status,
   ] = row;
 
   if (!email || !date || !type) {
@@ -196,6 +205,8 @@ function rowToRecord(
       isOverride === "TRUE" ||
       isOverride === "true",
     note: note || null,
+    status: normalizeStatus(status),
+    updatedAt: updatedAt || null,
   };
 }
 
@@ -209,16 +220,20 @@ async function ensureHeaders() {
     const response =
       await sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
-        range: `${SHEET_NAME}!A1:F1`,
+        range: `${SHEET_NAME}!A1:G1`,
       });
 
     const existingHeaders =
       response.data.values?.[0];
 
-    if (!existingHeaders?.length) {
+    const needsHeaders =
+      !existingHeaders?.length ||
+      existingHeaders[6] !== "Status";
+
+    if (needsHeaders) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
-        range: `${SHEET_NAME}!A1:F1`,
+        range: `${SHEET_NAME}!A1:G1`,
         valueInputOption: "RAW",
         requestBody: {
           values: [HEADERS],
@@ -247,7 +262,7 @@ async function getAllRows(): Promise<string[][]> {
     const response =
       await sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
-        range: `${SHEET_NAME}!A2:F`,
+        range: `${SHEET_NAME}!A2:G`,
       });
 
     return (
@@ -282,6 +297,7 @@ export async function getAttendanceRecords(
         record
       ): record is AttendanceRecord =>
         !!record &&
+        record.status !== "REJECTED" &&
         record.userId === email &&
         record.date >= startDate &&
         record.date <= endDate
@@ -314,6 +330,7 @@ export async function upsertAttendanceRecord(input: {
   type: AttendanceType;
   isOverride?: boolean;
   note?: string;
+  status?: LeaveStatus;
 }): Promise<AttendanceRecord> {
   const { sheets, sheetId } =
     getSheetsClient();
@@ -325,6 +342,8 @@ export async function upsertAttendanceRecord(input: {
 
   const now =
     new Date().toISOString();
+
+  const status: LeaveStatus = input.status || "APPROVED";
 
   const rowIndex = rows.findIndex(
     (row) =>
@@ -341,6 +360,7 @@ export async function upsertAttendanceRecord(input: {
       : "FALSE",
     input.note || "",
     now,
+    status,
   ];
 
   try {
@@ -354,7 +374,7 @@ export async function upsertAttendanceRecord(input: {
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetId,
-        range: `${SHEET_NAME}!A${sheetRow}:F${sheetRow}`,
+        range: `${SHEET_NAME}!A${sheetRow}:G${sheetRow}`,
         valueInputOption: "RAW",
         requestBody: {
           values: [newRow],
@@ -364,7 +384,7 @@ export async function upsertAttendanceRecord(input: {
       // New row.
       await sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
-        range: `${SHEET_NAME}!A:F`,
+        range: `${SHEET_NAME}!A:G`,
         valueInputOption: "RAW",
         insertDataOption: "INSERT_ROWS",
         requestBody: {
@@ -388,5 +408,21 @@ export async function upsertAttendanceRecord(input: {
     type: input.type,
     isOverride: !!input.isOverride,
     note: input.note || null,
+    status,
+    updatedAt: now,
   };
+}
+
+export async function getPendingLeaveRequests(): Promise<AttendanceRecord[]> {
+  const rows = await getAllRows();
+
+  return rows
+    .map(rowToRecord)
+    .filter(
+      (record): record is AttendanceRecord =>
+        !!record &&
+        record.status === "PENDING" &&
+        (record.type === "LEAVE" || record.type === "PLANNED_LEAVE")
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

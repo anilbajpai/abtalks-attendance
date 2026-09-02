@@ -60,4 +60,5 @@ export const ATTENDANCE_TYPE_BG: Record<string, string> = {
   PLANNED_LEAVE: "bg-orange-50 border-orange-200 text-orange-800",
   SUNDAY: "bg-slate-50 border-slate-200 text-slate-600",
   HOLIDAY: "bg-purple-50 border-purple-200 text-purple-800",
+  PENDING: "bg-yellow-50 border-yellow-300 text-yellow-800",
 };

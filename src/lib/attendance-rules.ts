@@ -74,15 +74,30 @@ export function getMonthName(year: number, month: number): string {
   return format(new Date(year, month - 1, 1), "MMMM yyyy");
 }
 
+export function isLeaveType(type?: string | null): boolean {
+  return type === "LEAVE" || type === "PLANNED_LEAVE";
+}
+
 export function canEmployeeMark(
   dateStr: string,
-  existingType?: string | null
+  existingType?: string | null,
+  existingStatus?: string | null
 ): { allowed: boolean; reason?: string } {
+  if (existingStatus === "PENDING") {
+    return {
+      allowed: false,
+      reason: "Leave request is pending admin approval",
+    };
+  }
+
   if (isPast(dateStr) && !isToday(dateStr)) {
     return { allowed: false, reason: "Cannot mark attendance for past dates" };
   }
 
   if (isFuture(dateStr)) {
+    if (isLeaveType(existingType) && existingStatus === "APPROVED") {
+      return { allowed: false, reason: "Approved leave cannot be changed" };
+    }
     if (existingType === "PLANNED_LEAVE") {
       return { allowed: false, reason: "Planned leave cannot be changed" };
     }
@@ -90,6 +105,9 @@ export function canEmployeeMark(
   }
 
   if (isToday(dateStr)) {
+    if (isLeaveType(existingType) && existingStatus === "APPROVED") {
+      return { allowed: false, reason: "Approved leave cannot be changed" };
+    }
     if (existingType && existingType !== "PLANNED_LEAVE") {
       return { allowed: false, reason: "Attendance already submitted for today" };
     }

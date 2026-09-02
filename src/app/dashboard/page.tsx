@@ -13,7 +13,7 @@ interface UserData {
     email: string;
     role: string;
   };
-  todayRecord: { type: string } | null;
+  todayRecord: { type: string; status?: string } | null;
   today: string;
 }
 
@@ -41,6 +41,7 @@ export default function DashboardPage() {
         .then((d) => {
           const stats: Record<string, number> = {};
           for (const r of d.records || []) {
+            if (r.status === "PENDING") continue;
             stats[r.type] = (stats[r.type] || 0) + 1;
           }
           setMonthlyStats(stats);
@@ -58,6 +59,7 @@ export default function DashboardPage() {
 
   const inWindow = isWithinAttendanceWindow();
   const todayType = data.todayRecord?.type;
+  const todayPending = data.todayRecord?.status === "PENDING";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -84,10 +86,22 @@ export default function DashboardPage() {
               Today&apos;s Attendance
             </h2>
             {todayType ? (
-              <div
-                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${ATTENDANCE_TYPE_BG[todayType]}`}
-              >
-                {ATTENDANCE_TYPE_LABELS[todayType]}
+              <div className="space-y-2">
+                <div
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${
+                    todayPending
+                      ? ATTENDANCE_TYPE_BG.PENDING
+                      : ATTENDANCE_TYPE_BG[todayType]
+                  }`}
+                >
+                  {ATTENDANCE_TYPE_LABELS[todayType]}
+                  {todayPending ? " (Pending approval)" : ""}
+                </div>
+                {todayPending && (
+                  <p className="text-sm text-yellow-700">
+                    Your leave request is waiting for admin approval.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
