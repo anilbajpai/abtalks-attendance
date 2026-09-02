@@ -6,7 +6,7 @@ export const ADMIN_EMAILS = [
 export const EMPLOYEES = [
   { name: "Sohail", email: "sksohailswaraj@gmail.com", baseSalary: 30000 },
   { name: "Suyash", email: "contactsuyashgupta@gmail.com", baseSalary: 30000 },
-  { name: "Sarthak", email: "sarthakguptaksj@gmail.com", baseSalary: 30000 },
+  { name: "Sarthak", email: "sarthakgupta.ksj@gmail.com", baseSalary: 30000 },
   { name: "Shallika", email: "shallika.bigbets@gmail.com", baseSalary: 20000 },
   { name: "Shivansh", email: "shivanshrai2316@gmail.com", baseSalary: 15000 },
   { name: "Aaron", email: "raoaaron077@gmail.com", baseSalary: 10000 },
