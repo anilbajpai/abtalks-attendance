@@ -14,6 +14,7 @@ export const EMPLOYEES = [
   { name: "Shashank", email: "shashankmishra00026@gmail.com", baseSalary: 20000 },
   { name: "Rudra", email: "Mrudra850@gmail.com", baseSalary: 18000 },
   { name: "Swarit", email: "swa172acc@gmail.com", baseSalary: 25000 },
+  { name: "Swarit", email: "contact.bigbetsai@gmail.com", baseSalary: 25000 },
 ];
 
 export const HOLIDAYS_2026 = [
