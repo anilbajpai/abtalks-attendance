@@ -49,7 +49,7 @@ export default function PayrollPage() {
       fetchRuns();
     }
   }, [status, session, month, year]);
-
+/* ------------------------------------------------------------- */
   async function fetchRuns() {
     setLoading(true);
     const res = await fetch(`/api/admin/payroll?month=${month}&year=${year}`);
