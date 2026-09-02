@@ -1,15 +1,93 @@
+import { createPrivateKey } from "crypto";
 import { google } from "googleapis";
 import type { AttendanceRecord, AttendanceType } from "@/types";
 
 const SHEET_NAME = "Attendance";
 const HEADERS = ["Email", "Date", "Type", "IsOverride", "Note", "UpdatedAt"];
 
-function getSheetsClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  const sheetId = process.env.GOOGLE_SHEET_ID;
+function stripWrappingQuotes(value: string): string {
+  const trimmed = value.trim().replace(/^\uFEFF/, "");
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
 
-  if (!email || !privateKey || !sheetId) {
+/**
+ * Vercel env vars do not parse like dotenv. Pasting a quoted PEM
+ * (`"-----BEGIN...\\n-----END..."`) leaves quotes and literal `\n`,
+ * which OpenSSL 3 rejects as `error:1E08010C:DECODER routines::unsupported`.
+ */
+function normalizePrivateKey(raw: string): string {
+  let key = stripWrappingQuotes(raw);
+
+  if (key.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(key) as { private_key?: string };
+      if (parsed.private_key) key = stripWrappingQuotes(parsed.private_key);
+    } catch {
+      // Not a service-account JSON blob; keep treating it as a PEM string.
+    }
+  }
+
+  key = key
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+
+  const headerMatch = key.match(/-----BEGIN [A-Z ]+KEY-----/);
+  const footerMatch = key.match(/-----END [A-Z ]+KEY-----/);
+  if (!headerMatch || !footerMatch) {
+    throw new Error(
+      "GOOGLE_PRIVATE_KEY is not a PEM key. Copy `private_key` from the service account JSON, including the BEGIN/END lines."
+    );
+  }
+
+  const header = headerMatch[0];
+  const footer = footerMatch[0];
+  const body = key
+    .slice(key.indexOf(header) + header.length, key.indexOf(footer))
+    .replace(/\s+/g, "");
+
+  if (!body) {
+    throw new Error(
+      "GOOGLE_PRIVATE_KEY is missing key data between the BEGIN/END lines."
+    );
+  }
+
+  const wrapped = body.match(/.{1,64}/g)?.join("\n") ?? body;
+  return `${header}\n${wrapped}\n${footer}\n`;
+}
+
+function parsePrivateKey(raw: string): string {
+  const pem = normalizePrivateKey(raw);
+  try {
+    return createPrivateKey(pem).export({
+      type: "pkcs8",
+      format: "pem",
+    }) as string;
+  } catch {
+    throw new Error(
+      "GOOGLE_PRIVATE_KEY could not be parsed. In Vercel, paste the key without extra quotes — either as a multiline value, or with \\n between PEM lines."
+    );
+  }
+}
+
+function getSheetsClient() {
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+    ? stripWrappingQuotes(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL)
+    : "";
+  const rawKey = process.env.GOOGLE_PRIVATE_KEY;
+  const sheetId = process.env.GOOGLE_SHEET_ID
+    ? stripWrappingQuotes(process.env.GOOGLE_SHEET_ID)
+    : "";
+
+  if (!email || !rawKey || !sheetId) {
     throw new Error(
       "Google Sheets not configured. Set GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, and GOOGLE_SHEET_ID."
     );
@@ -17,7 +95,7 @@ function getSheetsClient() {
 
   const auth = new google.auth.JWT({
     email,
-    key: privateKey,
+    key: parsePrivateKey(rawKey),
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
