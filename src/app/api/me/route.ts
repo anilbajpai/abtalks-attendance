@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/session";
 import { getUserById } from "@/lib/users";
 import { getAttendanceRecord } from "@/lib/google-sheets";
-import { getNowIST, toDateString } from "@/lib/attendance-rules";
+import { todayIST } from "@/lib/attendance-rules";
 
 export async function GET() {
   try {
     const session = await requireAuth();
-    const today = toDateString(getNowIST());
+    const today = todayIST();
     const user = getUserById(session.user.id);
 
     if (!user) {

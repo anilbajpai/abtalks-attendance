@@ -8,9 +8,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   OAuthSignin:
     "Could not start Google sign-in. On Vercel, NEXTAUTH_URL must be your https production domain (not localhost), and GOOGLE_CLIENT_ID must be set.",
   OAuthCallback:
-    "Google rejected the callback. In Google Cloud → Credentials → your Web client, add Authorized redirect URI: https://YOUR_DOMAIN/api/auth/callback/google",
+    "Google blocked this sign-in. If everyone fails, check the Authorized redirect URI. If only one person fails: Google Cloud → OAuth consent screen must be In production, or that Gmail must be listed under Test users. They should choose their listed work Gmail, not another Google account.",
   OAuthCreateAccount: "Could not create a session for this Google account.",
-  AccessDenied: "This Google account is not on the ABTalks employee list.",
+  AccessDenied:
+    "This Google account is not on the ABTalks employee list. Sign in with the exact Gmail registered for you.",
   Configuration:
     "Auth is misconfigured. Check NEXTAUTH_SECRET, GOOGLE_CLIENT_ID, and GOOGLE_CLIENT_SECRET on Vercel, then redeploy.",
   Default: "Sign-in failed. Try again.",

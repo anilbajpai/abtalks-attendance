@@ -200,7 +200,7 @@ export default function AdminPage() {
                           <p className="text-xs text-slate-500">{req.email}</p>
                         </td>
                         <td className="px-6 py-3 text-slate-700">
-                          {new Date(req.date + "T00:00:00").toLocaleDateString("en-IN", {
+                          {new Date(`${req.date}T12:00:00`).toLocaleDateString("en-IN", {
                             weekday: "short",
                             day: "numeric",
                             month: "short",

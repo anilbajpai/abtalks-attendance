@@ -10,11 +10,10 @@ import {
   canEmployeeMark,
   getMonthDays,
   getMonthName,
-  getNowIST,
   isFuture,
   isSunday,
   isToday,
-  toDateString,
+  todayIST,
 } from "@/lib/attendance-rules";
 import { format, parseISO } from "date-fns";
 
@@ -77,7 +76,7 @@ export function AttendanceCalendar({
   const days = getMonthDays(year, month);
   const recordMap = Object.fromEntries(records.map((r) => [r.date, r]));
   const firstDayOfWeek = parseISO(days[0]).getDay();
-  const today = toDateString(getNowIST());
+  const today = todayIST();
 
   function getDayType(date: string): string | null {
     if (recordMap[date]) return recordMap[date].type;

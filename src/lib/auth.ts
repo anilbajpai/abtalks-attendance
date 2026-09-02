@@ -8,6 +8,11 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
+      authorization: {
+        params: {
+          prompt: "select_account",
+        },
+      },
     }),
   ],
   callbacks: {

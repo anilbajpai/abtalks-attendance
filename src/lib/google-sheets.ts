@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import type { AttendanceRecord, AttendanceType, LeaveStatus } from "@/types";
+import { normalizeDateString } from "./attendance-rules";
 
 const SHEET_NAME = "Attendance";
 
@@ -196,10 +197,15 @@ function rowToRecord(
     return null;
   }
 
+  const normalizedDate = normalizeDateString(date);
+  if (!normalizedDate) {
+    return null;
+  }
+
   return {
-    id: `${email.toLowerCase()}-${date}`,
+    id: `${email.toLowerCase()}-${normalizedDate}`,
     userId: email.toLowerCase(),
-    date,
+    date: normalizedDate,
     type: type as AttendanceType,
     isOverride:
       isOverride === "TRUE" ||
@@ -348,7 +354,7 @@ export async function upsertAttendanceRecord(input: {
   const rowIndex = rows.findIndex(
     (row) =>
       row[0]?.toLowerCase() === email &&
-      row[1] === input.date
+      normalizeDateString(row[1]) === input.date
   );
 
   const newRow = [
