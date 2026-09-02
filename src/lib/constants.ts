@@ -8,13 +8,13 @@ export const EMPLOYEES = [
   { name: "Suyash", email: "contactsuyashgupta@gmail.com", baseSalary: 30000 },
   { name: "Sarthak", email: "sarthakguptaksj@gmail.com", baseSalary: 30000 },
   { name: "Shallika", email: "shallika.bigbets@gmail.com", baseSalary: 20000 },
-  { name: "Shivansh", email: "shivanshrai2316@gmail.com", baseSalary: 10000 },
+  { name: "Shivansh", email: "shivanshrai2316@gmail.com", baseSalary: 15000 },
   { name: "Aaron", email: "raoaaron077@gmail.com", baseSalary: 10000 },
   { name: "Zainab", email: "Zainabshujatali@gmail.com", baseSalary: 10000 },
   { name: "Shashank", email: "shashankmishra00026@gmail.com", baseSalary: 20000 },
   { name: "Rudra", email: "Mrudra850@gmail.com", baseSalary: 18000 },
   { name: "Swarit", email: "swa172acc@gmail.com", baseSalary: 25000 },
-  { name: "Swarit", email: "contact.bigbetsai@gmail.com", baseSalary: 25000 },
+  { name: "BB", email: "contact.bigbetsai@gmail.com", baseSalary: 0 },
 ];
 
 export const HOLIDAYS_2026 = [

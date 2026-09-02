@@ -12,10 +12,6 @@ interface UserData {
     name: string;
     email: string;
     role: string;
-    baseSalary: number;
-    fixedSalary: number;
-    variableSalary: number;
-    targetMet: boolean;
   };
   todayRecord: { type: string } | null;
   today: string;
@@ -82,7 +78,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
             <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide">
               Today&apos;s Attendance
@@ -136,42 +132,6 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-
-          {data.user.role === "EMPLOYEE" && (
-            <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
-              <h2 className="text-sm font-medium text-slate-500 uppercase tracking-wide">
-                Salary Overview
-              </h2>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Base Salary</span>
-                  <span className="font-medium">
-                    ₹{data.user.baseSalary.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Fixed (70%)</span>
-                  <span className="font-medium">
-                    ₹{data.user.fixedSalary.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Variable (30%)</span>
-                  <span className="font-medium">
-                    ₹{data.user.variableSalary.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-slate-100">
-                  <span className="text-slate-600">Target Met</span>
-                  <span
-                    className={`font-medium ${data.user.targetMet ? "text-emerald-600" : "text-red-500"}`}
-                  >
-                    {data.user.targetMet ? "Yes" : "No"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="bg-white rounded-xl border border-slate-200 p-6">

@@ -15,8 +15,14 @@ export async function GET() {
     }
 
     const todayRecord = await getAttendanceRecord(session.user.id, today);
+    const publicUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
 
-    return NextResponse.json({ user, todayRecord, today });
+    return NextResponse.json({ user: publicUser, todayRecord, today });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error";
     const status = message === "Unauthorized" ? 401 : 500;
