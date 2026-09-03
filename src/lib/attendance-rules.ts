@@ -10,6 +10,15 @@ import { ATTENDANCE_WINDOW } from "./constants";
 
 const TZ = ATTENDANCE_WINDOW.timezone;
 
+function sheetsSerialToISO(serial: number): string {
+  const whole = Math.floor(serial);
+  const utc = new Date(Date.UTC(1899, 11, 30) + whole * 86400000);
+  const y = utc.getUTCFullYear();
+  const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(utc.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 /** Today's calendar date in IST (`yyyy-MM-dd`). */
 export function todayIST(): string {
   return formatInTimeZone(new Date(), TZ, "yyyy-MM-dd");
@@ -35,14 +44,20 @@ export function getNowIST(): Date {
 export function normalizeDateString(raw: string | number | null | undefined): string | null {
   if (raw === null || raw === undefined || raw === "") return null;
 
-  if (typeof raw === "number" || (/^\d+(\.\d+)?$/.test(String(raw).trim()) && Number(raw) > 20000)) {
-    const serial = Math.floor(Number(raw));
-    const utc = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
-    return utc.toISOString().slice(0, 10);
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return sheetsSerialToISO(raw);
   }
 
   const trimmed = String(raw).trim();
-  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!trimmed) return null;
+
+  // Google Sheets UNFORMATTED_VALUE returns date cells as serials.
+  if (/^\d+(\.\d+)?$/.test(trimmed)) {
+    const n = Number(trimmed);
+    if (n > 20000 && n < 80000) return sheetsSerialToISO(n);
+  }
+
+  const iso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
   if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 
   const slash = trimmed.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
@@ -50,15 +65,24 @@ export function normalizeDateString(raw: string | number | null | undefined): st
     const first = parseInt(slash[1], 10);
     const second = parseInt(slash[2], 10);
     const year = slash[3];
-    // India locale is DD/MM/YYYY; treat as MM/DD only when the day slot is > 12.
-    const day = first > 12 ? first : second > 12 ? second : first;
-    const month = first > 12 ? second : second > 12 ? first : second;
+    // US formatted values look like 9/2/2026 (Sept 2). India looks like 02/09/2026.
+    // If the second part is > 12 it must be MM/DD; if the first is > 12 it must be DD/MM.
+    // Otherwise treat as MM/DD when first <= 12, which matches Google Sheets US locale
+    // (the common default) for September 1–12 — those were disappearing from the calendar.
+    let month: number;
+    let day: number;
+    if (second > 12) {
+      month = first;
+      day = second;
+    } else if (first > 12) {
+      day = first;
+      month = second;
+    } else {
+      month = first;
+      day = second;
+    }
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  }
-
-  const parsed = new Date(trimmed);
-  if (!Number.isNaN(parsed.getTime())) {
-    return formatInTimeZone(parsed, TZ, "yyyy-MM-dd");
   }
 
   return null;

@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import type { AttendanceRecord, AttendanceType, LeaveStatus } from "@/types";
 import { normalizeDateString } from "./attendance-rules";
+import { canonicalizeEmail } from "./users";
 
 const SHEET_NAME = "Attendance";
 
@@ -181,7 +182,7 @@ function normalizeStatus(raw?: string): LeaveStatus {
  * Convert a Google Sheets row into an AttendanceRecord.
  */
 function rowToRecord(
-  row: string[]
+  row: Array<string | number | boolean | null>
 ): AttendanceRecord | null {
   const [
     email,
@@ -193,26 +194,28 @@ function rowToRecord(
     status,
   ] = row;
 
-  if (!email || !date || !type) {
+  if (!email || date === null || date === undefined || date === "" || !type) {
     return null;
   }
 
-  const normalizedDate = normalizeDateString(date);
+  const normalizedDate = normalizeDateString(date as string | number);
   if (!normalizedDate) {
     return null;
   }
 
+  const normalizedEmail = canonicalizeEmail(String(email));
+
   return {
-    id: `${email.toLowerCase()}-${normalizedDate}`,
-    userId: email.toLowerCase(),
+    id: `${normalizedEmail}-${normalizedDate}`,
+    userId: normalizedEmail,
     date: normalizedDate,
-    type: type as AttendanceType,
+    type: String(type) as AttendanceType,
     isOverride:
-      isOverride === "TRUE" ||
-      isOverride === "true",
-    note: note || null,
-    status: normalizeStatus(status),
-    updatedAt: updatedAt || null,
+      String(isOverride) === "TRUE" ||
+      String(isOverride) === "true",
+    note: note ? String(note) : null,
+    status: normalizeStatus(status == null ? "" : String(status)),
+    updatedAt: updatedAt ? String(updatedAt) : null,
   };
 }
 
@@ -227,6 +230,7 @@ async function ensureHeaders() {
       await sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
         range: `${SHEET_NAME}!A1:G1`,
+        valueRenderOption: "UNFORMATTED_VALUE",
       });
 
     const existingHeaders =
@@ -259,7 +263,7 @@ async function ensureHeaders() {
 /**
  * Get all attendance rows.
  */
-async function getAllRows(): Promise<string[][]> {
+async function getAllRows(): Promise<Array<Array<string | number | boolean | null>>> {
   const { sheets, sheetId } = getSheetsClient();
 
   await ensureHeaders();
@@ -269,10 +273,13 @@ async function getAllRows(): Promise<string[][]> {
       await sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
         range: `${SHEET_NAME}!A2:G`,
+        valueRenderOption: "UNFORMATTED_VALUE",
+        dateTimeRenderOption: "SERIAL_NUMBER",
       });
 
     return (
-      (response.data.values as string[][]) || []
+      (response.data.values as Array<Array<string | number | boolean | null>>) ||
+      []
     );
   } catch (error) {
     console.error(
@@ -294,7 +301,7 @@ export async function getAttendanceRecords(
 ): Promise<AttendanceRecord[]> {
   const rows = await getAllRows();
 
-  const email = userId.toLowerCase();
+  const email = canonicalizeEmail(userId);
 
   return rows
     .map(rowToRecord)
@@ -343,19 +350,20 @@ export async function upsertAttendanceRecord(input: {
 
   const rows = await getAllRows();
 
-  const email =
-    input.userId.toLowerCase();
+  const email = canonicalizeEmail(input.userId);
 
   const now =
     new Date().toISOString();
 
   const status: LeaveStatus = input.status || "APPROVED";
 
-  const rowIndex = rows.findIndex(
-    (row) =>
-      row[0]?.toLowerCase() === email &&
-      normalizeDateString(row[1]) === input.date
-  );
+  const rowIndex = rows.findIndex((row) => {
+    const rowEmail = row[0] == null ? "" : canonicalizeEmail(String(row[0]));
+    return (
+      rowEmail === email &&
+      normalizeDateString(row[1] as string | number) === input.date
+    );
+  });
 
   const newRow = [
     email,
