@@ -55,7 +55,7 @@ export default function AdminPage() {
       router.push("/dashboard");
     }
   }, [status, session, router]);
-/* //Employee Salary Configuration */
+
   const fetchLeaveRequests = useCallback(async () => {
     const res = await fetch("/api/admin/leave-requests");
     const data = await res.json();
@@ -163,6 +163,78 @@ export default function AdminPage() {
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <h1 className="text-2xl font-bold text-slate-900">Admin Panel</h1>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Employee Attendance
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  let m = month - 1;
+                  let y = year;
+                  if (m < 1) { m = 12; y--; }
+                  setMonth(m);
+                  setYear(y);
+                }}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-white"
+              >
+                ←
+              </button>
+              <button
+                onClick={() => {
+                  const n = getNowIST();
+                  setYear(n.getFullYear());
+                  setMonth(n.getMonth() + 1);
+                }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-white"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => {
+                  let m = month + 1;
+                  let y = year;
+                  if (m > 12) { m = 1; y++; }
+                  setMonth(m);
+                  setYear(y);
+                }}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-white"
+              >
+                →
+              </button>
+              <select
+                value={selectedEmployee || ""}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              >
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+            </div>
+          ) : (
+            <AttendanceCalendar
+              year={year}
+              month={month}
+              records={records}
+              holidays={holidays}
+              onMark={handleAdminOverride}
+              isAdmin
+              onAdminOverride={handleAdminOverride}
+              onLeaveDecision={handleCalendarLeaveDecision}
+            />
+          )}
+        </section>
 
         <section className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
@@ -323,78 +395,6 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Attendance Override
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  let m = month - 1;
-                  let y = year;
-                  if (m < 1) { m = 12; y--; }
-                  setMonth(m);
-                  setYear(y);
-                }}
-                className="p-2 rounded-lg border border-slate-200 hover:bg-white"
-              >
-                ←
-              </button>
-              <button
-                onClick={() => {
-                  const n = getNowIST();
-                  setYear(n.getFullYear());
-                  setMonth(n.getMonth() + 1);
-                }}
-                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-white"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => {
-                  let m = month + 1;
-                  let y = year;
-                  if (m > 12) { m = 1; y++; }
-                  setMonth(m);
-                  setYear(y);
-                }}
-                className="p-2 rounded-lg border border-slate-200 hover:bg-white"
-              >
-                →
-              </button>
-              <select
-                value={selectedEmployee || ""}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-              >
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
-            </div>
-          ) : (
-            <AttendanceCalendar
-              year={year}
-              month={month}
-              records={records}
-              holidays={holidays}
-              onMark={handleAdminOverride}
-              isAdmin
-              onAdminOverride={handleAdminOverride}
-              onLeaveDecision={handleCalendarLeaveDecision}
-            />
-          )}
         </section>
       </main>
     </div>

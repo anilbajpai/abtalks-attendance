@@ -8,9 +8,11 @@ import {
 } from "@/lib/google-sheets";
 import {
   canEmployeeMark,
+  canTakeHalfDay,
   isFuture,
   isLeaveType,
   isSunday,
+  monthRange,
 } from "@/lib/attendance-rules";
 import type { AttendanceType } from "@/types";
 
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validTypes: AttendanceType[] = ["OFFICE", "HOME", "LEAVE"];
+    const validTypes: AttendanceType[] = ["OFFICE", "HOME", "HALF_DAY", "LEAVE"];
     const futureTypes: AttendanceType[] = ["PLANNED_LEAVE"];
 
     if (isSunday(date)) {
@@ -121,6 +123,15 @@ export async function POST(req: NextRequest) {
         );
       }
       attendanceType = type;
+    }
+
+    if (attendanceType === "HALF_DAY") {
+      const { start, end } = monthRange(date);
+      const monthRecords = await getAttendanceRecords(session.user.id, start, end);
+      const halfDay = canTakeHalfDay(monthRecords, date);
+      if (!halfDay.allowed) {
+        return NextResponse.json({ error: halfDay.reason }, { status: 400 });
+      }
     }
 
     const requestingLeave = isLeaveType(attendanceType);

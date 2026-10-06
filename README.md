@@ -106,9 +106,7 @@ To re-enable, uncomment those files, add `DATABASE_URL` to `.env`, and restore p
 | Sohail | sksohailswaraj@gmail.com | ₹30,000 |
 | Suyash | contactsuyashgupta@gmail.com | ₹30,000 |
 | Sarthak | sarthakguptaksj@gmail.com | ₹30,000 |
-| Shallika | shallika.bigbets@gmail.com | ₹20,000 |
 | Shivansh | shivanshrai2316@gmail.com | ₹10,000 |
-| Aaron | raoaaron077@gmail.com | ₹10,000 |
 | Zainab | Zainabshujatali@gmail.com | ₹10,000 |
 | Shashank | shashankmishra00026@gmail.com | ₹20,000 |
 | Rudra | Mrudra850@gmail.com | ₹18,000 |

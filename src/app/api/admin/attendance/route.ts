@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/session";
-import { upsertAttendanceRecord } from "@/lib/google-sheets";
-import { canAdminOverride } from "@/lib/attendance-rules";
+import {
+  getAttendanceRecords,
+  upsertAttendanceRecord,
+} from "@/lib/google-sheets";
+import {
+  canAdminOverride,
+  canTakeHalfDay,
+  monthRange,
+} from "@/lib/attendance-rules";
 import type { AttendanceType } from "@/types";
 
 export async function PATCH(req: NextRequest) {
@@ -19,6 +26,7 @@ export async function PATCH(req: NextRequest) {
     const validTypes: AttendanceType[] = [
       "OFFICE",
       "HOME",
+      "HALF_DAY",
       "LEAVE",
       "PLANNED_LEAVE",
     ];
@@ -36,6 +44,15 @@ export async function PATCH(req: NextRequest) {
         { error: "Admin can only override attendance for the last 7 days" },
         { status: 400 }
       );
+    }
+
+    if (type === "HALF_DAY") {
+      const { start, end } = monthRange(date);
+      const monthRecords = await getAttendanceRecords(userId, start, end);
+      const halfDay = canTakeHalfDay(monthRecords, date);
+      if (!halfDay.allowed) {
+        return NextResponse.json({ error: halfDay.reason }, { status: 400 });
+      }
     }
 
     const record = await upsertAttendanceRecord({

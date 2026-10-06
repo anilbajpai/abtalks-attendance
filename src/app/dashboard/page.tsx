@@ -4,8 +4,15 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
-import { ATTENDANCE_TYPE_BG, ATTENDANCE_TYPE_LABELS } from "@/lib/constants";
-import { isWithinAttendanceWindow } from "@/lib/attendance-rules";
+import {
+  ATTENDANCE_TYPE_BG,
+  ATTENDANCE_TYPE_LABELS,
+  MAX_HALF_DAYS_PER_MONTH,
+} from "@/lib/constants";
+import {
+  formatMarkedTime,
+  isWithinAttendanceWindow,
+} from "@/lib/attendance-rules";
 
 interface UserData {
   user: {
@@ -13,7 +20,7 @@ interface UserData {
     email: string;
     role: string;
   };
-  todayRecord: { type: string; status?: string } | null;
+  todayRecord: { type: string; status?: string; updatedAt?: string | null } | null;
   today: string;
 }
 
@@ -60,6 +67,7 @@ export default function DashboardPage() {
   const inWindow = isWithinAttendanceWindow();
   const todayType = data.todayRecord?.type;
   const todayPending = data.todayRecord?.status === "PENDING";
+  const todayMarkedTime = formatMarkedTime(data.todayRecord?.updatedAt);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -97,6 +105,11 @@ export default function DashboardPage() {
                   {ATTENDANCE_TYPE_LABELS[todayType]}
                   {todayPending ? " (Pending approval)" : ""}
                 </div>
+                {todayMarkedTime && (
+                  <p className="text-sm text-slate-500">
+                    Marked at {todayMarkedTime} IST
+                  </p>
+                )}
                 {todayPending && (
                   <p className="text-sm text-yellow-700">
                     Your leave request is waiting for admin approval.
@@ -106,6 +119,9 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-2">
                 <p className="text-slate-600">Not marked yet</p>
+                <p className="text-sm text-slate-500">
+                  Attendance marking time: 9 AM – 9 PM IST
+                </p>
                 {inWindow ? (
                   <a
                     href="/calendar"
@@ -115,7 +131,7 @@ export default function DashboardPage() {
                   </a>
                 ) : (
                   <p className="text-sm text-amber-600">
-                    Attendance window: 9 AM – 9 PM IST
+                    Attendance marking is closed right now.
                   </p>
                 )}
               </div>
@@ -130,6 +146,11 @@ export default function DashboardPage() {
               {[
                 { label: "Office", key: "OFFICE", color: "text-emerald-600" },
                 { label: "Home", key: "HOME", color: "text-blue-600" },
+                {
+                  label: `Half Day (max ${MAX_HALF_DAYS_PER_MONTH})`,
+                  key: "HALF_DAY",
+                  color: "text-teal-600",
+                },
                 { label: "Leave", key: "LEAVE", color: "text-amber-600" },
                 {
                   label: "Planned",

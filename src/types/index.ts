@@ -3,6 +3,7 @@ export type Role = "ADMIN" | "EMPLOYEE";
 export type AttendanceType =
   | "OFFICE"
   | "HOME"
+  | "HALF_DAY"
   | "LEAVE"
   | "PLANNED_LEAVE"
   | "SUNDAY"

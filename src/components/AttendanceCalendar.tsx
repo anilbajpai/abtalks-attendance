@@ -5,9 +5,13 @@ import {
   ATTENDANCE_TYPE_BG,
   ATTENDANCE_TYPE_COLORS,
   ATTENDANCE_TYPE_LABELS,
+  MAX_HALF_DAYS_PER_MONTH,
 } from "@/lib/constants";
 import {
   canEmployeeMark,
+  canTakeHalfDay,
+  countHalfDays,
+  formatMarkedTime,
   getMonthDays,
   getMonthName,
   isFuture,
@@ -23,6 +27,7 @@ interface AttendanceRecord {
   type: string;
   isOverride: boolean;
   status?: string;
+  updatedAt?: string | null;
 }
 
 interface Holiday {
@@ -45,6 +50,7 @@ interface CalendarProps {
 const MARK_OPTIONS = [
   { type: "OFFICE", label: "Office", color: "bg-emerald-500" },
   { type: "HOME", label: "Home", color: "bg-blue-500" },
+  { type: "HALF_DAY", label: "Half Day", color: "bg-teal-500" },
   { type: "LEAVE", label: "Request Leave", color: "bg-amber-500" },
 ];
 
@@ -55,6 +61,7 @@ const FUTURE_OPTIONS = [
 const ADMIN_MARK_OPTIONS = [
   { type: "OFFICE", label: "Office", color: "bg-emerald-500" },
   { type: "HOME", label: "Home", color: "bg-blue-500" },
+  { type: "HALF_DAY", label: "Half Day", color: "bg-teal-500" },
   { type: "LEAVE", label: "Leave (Approved)", color: "bg-amber-500" },
   { type: "PLANNED_LEAVE", label: "Planned Leave (Approved)", color: "bg-orange-500" },
 ];
@@ -147,9 +154,16 @@ export function AttendanceCalendar({
   const options =
     selectedDate && isFuture(selectedDate) ? FUTURE_OPTIONS : MARK_OPTIONS;
 
+  const halfDaysUsed = countHalfDays(records);
+  const halfDayAllowed = selectedDate
+    ? canTakeHalfDay(records, selectedDate).allowed
+    : false;
+  const selectedMarkedTime = formatMarkedTime(selectedRecord?.updatedAt);
+
   const summary = {
     office: records.filter((r) => r.type === "OFFICE").length,
     home: records.filter((r) => r.type === "HOME").length,
+    halfDay: halfDaysUsed,
     leave: records.filter(
       (r) =>
         (r.type === "LEAVE" || r.type === "PLANNED_LEAVE") &&
@@ -167,9 +181,10 @@ export function AttendanceCalendar({
           {getMonthName(year, month)}
         </h2>
         <div className="flex flex-wrap gap-4 text-sm">
-          {Object.entries({
+          {Object.entries<number | string>({
             Office: summary.office,
             Home: summary.home,
+            "Half Day": `${summary.halfDay}/${MAX_HALF_DAYS_PER_MONTH}`,
             Leave: summary.leave,
             Pending: summary.pending,
             Sundays: summary.sundays,
@@ -181,6 +196,10 @@ export function AttendanceCalendar({
           ))}
         </div>
       </div>
+
+      <p className="text-sm text-slate-600">
+        Attendance marking time: <strong className="text-slate-900">9:00 AM – 9:00 PM IST</strong>
+      </p>
 
       <div className="flex flex-wrap gap-3 text-xs">
         {Object.entries(ATTENDANCE_TYPE_LABELS).map(([type, label]) => (
@@ -274,6 +293,11 @@ export function AttendanceCalendar({
                   Current: {getDayLabel(selectedDate)}
                 </p>
               )}
+              {selectedMarkedTime && (
+                <p className="text-sm text-slate-500">
+                  {selectedRecord?.isOverride ? "Updated" : "Marked"} at {selectedMarkedTime} IST
+                </p>
+              )}
               {selectedPending && (
                 <p className="text-sm text-yellow-700 mt-1">
                   Waiting for admin approval.
@@ -334,19 +358,30 @@ export function AttendanceCalendar({
                   </p>
                 )}
                 <div className="grid grid-cols-1 gap-2">
-                  {(isAdmin ? ADMIN_MARK_OPTIONS : options).map((opt) => (
-                    <button
-                      key={opt.type}
-                      onClick={() => handleMark(opt.type)}
-                      disabled={marking}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors disabled:opacity-50"
-                    >
-                      <div className={`w-4 h-4 rounded-full ${opt.color}`} />
-                      <span className="font-medium text-slate-800">
-                        {opt.label}
-                      </span>
-                    </button>
-                  ))}
+                  {(isAdmin ? ADMIN_MARK_OPTIONS : options).map((opt) => {
+                    const isHalfDay = opt.type === "HALF_DAY";
+                    const blocked = isHalfDay && !halfDayAllowed;
+                    return (
+                      <button
+                        key={opt.type}
+                        onClick={() => handleMark(opt.type)}
+                        disabled={marking || blocked}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors disabled:opacity-50"
+                      >
+                        <div className={`w-4 h-4 rounded-full ${opt.color}`} />
+                        <span className="font-medium text-slate-800">
+                          {opt.label}
+                        </span>
+                        {isHalfDay && (
+                          <span className="ml-auto text-xs text-slate-500">
+                            {blocked
+                              ? "Limit reached"
+                              : `${halfDaysUsed}/${MAX_HALF_DAYS_PER_MONTH} used`}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

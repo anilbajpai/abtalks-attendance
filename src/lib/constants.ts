@@ -7,9 +7,7 @@ export const EMPLOYEES = [
   { name: "Sohail", email: "sksohailswaraj@gmail.com", baseSalary: 30000 },
   { name: "Suyash", email: "contactsuyashgupta@gmail.com", baseSalary: 30000 },
   { name: "Sarthak", email: "sarthakgupta.ksj@gmail.com", baseSalary: 30000 },
-  { name: "Shallika", email: "shallika.bigbets@gmail.com", baseSalary: 20000 },
   { name: "Shivansh", email: "shivanshrai2316@gmail.com", baseSalary: 15000 },
-  { name: "Aaron", email: "raoaaron077@gmail.com", baseSalary: 10000 },
   { name: "Zainab", email: "Zainabshujatali@gmail.com", baseSalary: 10000 },
   { name: "Shashank", email: "Shashankmishra00026@gmail.com", baseSalary: 20000 },
   { name: "Rudra", email: "Mrudra850@gmail.com", baseSalary: 18000 },
@@ -35,9 +33,12 @@ export const ATTENDANCE_WINDOW = {
   timezone: "Asia/Kolkata",
 };
 
+export const MAX_HALF_DAYS_PER_MONTH = 3;
+
 export const ATTENDANCE_TYPE_LABELS: Record<string, string> = {
   OFFICE: "Office",
   HOME: "Home",
+  HALF_DAY: "Half Day",
   LEAVE: "Leave",
   PLANNED_LEAVE: "Planned Leave",
   SUNDAY: "Sunday",
@@ -47,6 +48,7 @@ export const ATTENDANCE_TYPE_LABELS: Record<string, string> = {
 export const ATTENDANCE_TYPE_COLORS: Record<string, string> = {
   OFFICE: "bg-emerald-500",
   HOME: "bg-blue-500",
+  HALF_DAY: "bg-teal-500",
   LEAVE: "bg-amber-500",
   PLANNED_LEAVE: "bg-orange-500",
   SUNDAY: "bg-slate-400",
@@ -56,6 +58,7 @@ export const ATTENDANCE_TYPE_COLORS: Record<string, string> = {
 export const ATTENDANCE_TYPE_BG: Record<string, string> = {
   OFFICE: "bg-emerald-50 border-emerald-200 text-emerald-800",
   HOME: "bg-blue-50 border-blue-200 text-blue-800",
+  HALF_DAY: "bg-teal-50 border-teal-200 text-teal-800",
   LEAVE: "bg-amber-50 border-amber-200 text-amber-800",
   PLANNED_LEAVE: "bg-orange-50 border-orange-200 text-orange-800",
   SUNDAY: "bg-slate-50 border-slate-200 text-slate-600",

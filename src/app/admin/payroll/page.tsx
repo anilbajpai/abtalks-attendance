@@ -16,6 +16,7 @@ interface PayrollRun {
   targetMet: boolean;
   officeDays: number;
   homeDays: number;
+  halfDays: number;
   leaveDays: number;
   processedAt: string;
   processedBy: string;
@@ -164,6 +165,7 @@ export default function PayrollPage() {
                     <th className="px-6 py-3 font-medium">Employee</th>
                     <th className="px-6 py-3 font-medium text-center">Office</th>
                     <th className="px-6 py-3 font-medium text-center">Home</th>
+                    <th className="px-6 py-3 font-medium text-center">Half Day</th>
                     <th className="px-6 py-3 font-medium text-center">Leave</th>
                     <th className="px-6 py-3 font-medium text-center">Target</th>
                     <th className="px-6 py-3 font-medium text-right">Fixed</th>
@@ -187,6 +189,9 @@ export default function PayrollPage() {
                       </td>
                       <td className="px-6 py-3 text-center text-blue-600 font-medium">
                         {run.homeDays}
+                      </td>
+                      <td className="px-6 py-3 text-center text-teal-600 font-medium">
+                        {run.halfDays}
                       </td>
                       <td className="px-6 py-3 text-center text-amber-600 font-medium">
                         {run.leaveDays}

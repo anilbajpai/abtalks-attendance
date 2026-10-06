@@ -73,6 +73,7 @@ async function computePayrollRuns(
 
     let officeDays = 0;
     let homeDays = 0;
+    let halfDays = 0;
     let leaveDays = 0;
 
     for (const day of days) {
@@ -83,6 +84,7 @@ async function computePayrollRuns(
       }
       if (type === "OFFICE") officeDays++;
       else if (type === "HOME") homeDays++;
+      else if (type === "HALF_DAY") halfDays++;
       else leaveDays++;
     }
 
@@ -92,6 +94,7 @@ async function computePayrollRuns(
       emp.targetMet,
       officeDays,
       homeDays,
+      halfDays,
       totalWorkingDays
     );
 
@@ -106,6 +109,7 @@ async function computePayrollRuns(
       targetMet: emp.targetMet,
       officeDays,
       homeDays,
+      halfDays,
       leaveDays,
       processedAt: new Date().toISOString(),
       processedBy,

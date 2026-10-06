@@ -6,7 +6,7 @@ import {
   startOfMonth,
   isAfter,
 } from "date-fns";
-import { ATTENDANCE_WINDOW } from "./constants";
+import { ATTENDANCE_WINDOW, MAX_HALF_DAYS_PER_MONTH } from "./constants";
 
 const TZ = ATTENDANCE_WINDOW.timezone;
 
@@ -195,6 +195,43 @@ export function canEmployeeMark(
   return { allowed: true };
 }
 
+/** Half days already used in a month's records, ignoring `excludeDate` (the day being re-marked). */
+export function countHalfDays(
+  records: { date: string; type: string; status?: string | null }[],
+  excludeDate?: string
+): number {
+  return records.filter(
+    (r) => r.type === "HALF_DAY" && r.status !== "REJECTED" && r.date !== excludeDate
+  ).length;
+}
+
+export function canTakeHalfDay(
+  records: { date: string; type: string; status?: string | null }[],
+  date: string
+): { allowed: boolean; reason?: string } {
+  if (countHalfDays(records, date) >= MAX_HALF_DAYS_PER_MONTH) {
+    return {
+      allowed: false,
+      reason: `Only ${MAX_HALF_DAYS_PER_MONTH} half days are allowed per month`,
+    };
+  }
+  return { allowed: true };
+}
+
+/** First and last possible date strings of the month containing `dateStr`. */
+export function monthRange(dateStr: string): { start: string; end: string } {
+  const prefix = dateStr.slice(0, 8);
+  return { start: `${prefix}01`, end: `${prefix}31` };
+}
+
+/** IST wall-clock time an attendance record was last written, e.g. "10:32 AM". */
+export function formatMarkedTime(updatedAt?: string | null): string | null {
+  if (!updatedAt) return null;
+  const date = new Date(updatedAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return formatInTimeZone(date, TZ, "h:mm a");
+}
+
 export function canAdminOverride(dateStr: string): boolean {
   return isWithinLast7Days(dateStr) || isToday(dateStr);
 }
@@ -214,11 +251,14 @@ export function calculatePayroll(
   targetMet: boolean,
   officeDays: number,
   homeDays: number,
+  halfDays: number,
   totalWorkingDays: number
 ): { fixedAmount: number; variableAmount: number; totalAmount: number } {
   const fixedAmount = fixedSalary;
   const attendanceRatio =
-    totalWorkingDays > 0 ? (officeDays + homeDays) / totalWorkingDays : 0;
+    totalWorkingDays > 0
+      ? (officeDays + homeDays + halfDays * 0.5) / totalWorkingDays
+      : 0;
   const variableAmount = targetMet
     ? Math.round(variableSalary * attendanceRatio)
     : 0;
